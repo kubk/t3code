@@ -22,11 +22,7 @@ const DIFF_INLINE_DEFAULT_WIDTH = "clamp(28rem,48vw,44rem)";
 const DIFF_INLINE_SIDEBAR_MIN_WIDTH = 26 * 16;
 const COMPOSER_COMPACT_MIN_LEFT_CONTROLS_WIDTH_PX = 208;
 
-const RightPanelSheet = (props: {
-  children: ReactNode;
-  open: boolean;
-  onClose: () => void;
-}) => {
+const RightPanelSheet = (props: { children: ReactNode; open: boolean; onClose: () => void }) => {
   return (
     <Sheet
       open={props.open}
@@ -58,7 +54,16 @@ const RightPanelInlineSidebar = (props: {
   renderDiff: boolean;
   renderBrowser: boolean;
 }) => {
-  const { panelOpen, onClose, onOpen, activeTab, onTabChange, projectId, renderDiff, renderBrowser } = props;
+  const {
+    panelOpen,
+    onClose,
+    onOpen,
+    activeTab,
+    onTabChange,
+    projectId,
+    renderDiff,
+    renderBrowser,
+  } = props;
   const onOpenChange = useCallback(
     (open: boolean) => {
       if (open) {
@@ -170,7 +175,9 @@ function ChatThreadRouteView() {
   // TanStack Router keeps active route components mounted across param-only navigations
   // unless remountDeps are configured, so this stays warm across thread switches.
   const [hasOpenedDiff, setHasOpenedDiff] = useState(panelOpen && activeRightPanelTab === "diff");
-  const [hasOpenedBrowser, setHasOpenedBrowser] = useState(panelOpen && activeRightPanelTab === "browser");
+  const [hasOpenedBrowser, setHasOpenedBrowser] = useState(
+    panelOpen && activeRightPanelTab === "browser",
+  );
 
   const closePanel = useCallback(() => {
     void navigate({

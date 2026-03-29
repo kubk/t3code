@@ -1,8 +1,10 @@
 import type { ProjectId } from "@t3tools/contracts";
 import {
-  ArrowLeftIcon,
-  ArrowRightIcon,
+  AppWindowIcon,
   ExternalLinkIcon,
+  Grid2x2Icon,
+  Grid3x2Icon,
+  Grid3x3Icon,
   PlusIcon,
   RefreshCwIcon,
   XIcon,
@@ -12,9 +14,11 @@ import {
   useBrowserPanelStore,
   selectProjectBrowserState,
   type BrowserTab,
+  type ViewMode,
 } from "../browserPanelStore";
 import { cn } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
+import BrowserGridView from "./BrowserGridView";
 
 interface BrowserPanelProps {
   projectId: ProjectId;
@@ -143,6 +147,43 @@ function BrowserUrlBar({
   );
 }
 
+const VIEW_MODE_OPTIONS: { mode: ViewMode; icon: typeof AppWindowIcon; label: string }[] = [
+  { mode: "tabs", icon: AppWindowIcon, label: "Tabs" },
+  { mode: "grid-2x2", icon: Grid2x2Icon, label: "2x2 Grid" },
+  { mode: "grid-2x3", icon: Grid3x2Icon, label: "2x3 Grid" },
+  { mode: "grid-3x3", icon: Grid3x3Icon, label: "3x3 Grid" },
+];
+
+export function ViewModeToggle({
+  currentMode,
+  onSetMode,
+}: {
+  currentMode: ViewMode;
+  onSetMode: (mode: ViewMode) => void;
+}) {
+  return (
+    <div className="flex items-center gap-0.5">
+      {VIEW_MODE_OPTIONS.map(({ mode, icon: Icon, label }) => (
+        <button
+          key={mode}
+          type="button"
+          className={cn(
+            "shrink-0 rounded p-1 transition-colors",
+            currentMode === mode
+              ? "bg-accent text-accent-foreground"
+              : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+          )}
+          onClick={() => onSetMode(mode)}
+          aria-label={label}
+          title={label}
+        >
+          <Icon className="size-3" />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 const BrowserPanel = memo(function BrowserPanel({ projectId }: BrowserPanelProps) {
   const browserState = useBrowserPanelStore((store) =>
     selectProjectBrowserState(store.browserStateByProjectId, projectId),
@@ -151,6 +192,8 @@ const BrowserPanel = memo(function BrowserPanel({ projectId }: BrowserPanelProps
   const closeTab = useBrowserPanelStore((store) => store.closeTab);
   const setActiveTab = useBrowserPanelStore((store) => store.setActiveTab);
   const navigateTab = useBrowserPanelStore((store) => store.navigateTab);
+
+  const isGridMode = browserState.viewMode !== "tabs";
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -176,30 +219,21 @@ const BrowserPanel = memo(function BrowserPanel({ projectId }: BrowserPanelProps
 
   if (browserState.tabs.length === 0) {
     return (
-      <div className="flex h-full flex-col bg-background">
-        <div className="flex items-center gap-1 border-b border-border px-2 py-1.5">
-          <span className="text-xs font-medium text-muted-foreground">Browser</span>
-          <button
-            type="button"
-            className="ml-auto shrink-0 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-            onClick={() => addTab(projectId, "")}
-            aria-label="New tab"
-          >
-            <PlusIcon className="size-3" />
-          </button>
-        </div>
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 text-muted-foreground">
-          <p className="text-sm">No browser tabs open</p>
-          <button
-            type="button"
-            className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-accent"
-            onClick={() => addTab(projectId, "")}
-          >
-            Open a new tab
-          </button>
-        </div>
+      <div className="flex h-full flex-col items-center justify-center gap-2 bg-background text-muted-foreground">
+        <p className="text-sm">No browser tabs open</p>
+        <button
+          type="button"
+          className="rounded-md border border-border px-3 py-1.5 text-xs hover:bg-accent"
+          onClick={() => addTab(projectId, "")}
+        >
+          Open a new tab
+        </button>
       </div>
     );
+  }
+
+  if (isGridMode) {
+    return <BrowserGridView projectId={projectId} />;
   }
 
   return (
@@ -238,7 +272,7 @@ const BrowserPanel = memo(function BrowserPanel({ projectId }: BrowserPanelProps
       )}
 
       {/* iframe area */}
-      <div className="relative min-h-0 flex-1">
+      <div className="relative min-h-0 flex-1 overflow-hidden">
         {browserState.tabs.map((tab) => (
           <iframe
             key={tab.id}
@@ -246,9 +280,15 @@ const BrowserPanel = memo(function BrowserPanel({ projectId }: BrowserPanelProps
             src={tab.url || undefined}
             title={tab.title || tab.url}
             className={cn(
-              "absolute inset-0 h-full w-full border-none bg-white",
+              "absolute border-none bg-white",
               tab.id === browserState.activeTabId ? "block" : "hidden",
             )}
+            style={{
+              transformOrigin: "top left",
+              transform: `scale(${browserState.zoom})`,
+              width: `${100 / browserState.zoom}%`,
+              height: `${100 / browserState.zoom}%`,
+            }}
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
           />
         ))}
